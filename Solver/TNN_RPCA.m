@@ -39,14 +39,14 @@ function [A_hat, E_hat, time_n_obj, iter] = TNN_RPCA(D, PARA)
 [m n] = size(D);
 const_rank = PARA.target_rank;
 
-lambda = 1 / sqrt(max(m,n));
+lambda = PARA.beta / sqrt(max(m,n));
 tol = PARA.tol;
 maxIter = 1000;
 
 % initialize
-Y = D;
+% Y = D;
 
-% Y = zeros( m, n);
+Y = zeros( m, n);
 norm_two = norm(D, 2);
 norm_inf = norm( D(:), inf) / lambda;
 dual_norm = max(norm_two, norm_inf);

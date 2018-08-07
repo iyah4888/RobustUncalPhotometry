@@ -1,17 +1,25 @@
 clear all;
 close all; clf; addpath(genpath('Solver'));
 
+
+
+
 %% Definition
 IMGPATH = '../Photometry_sample/cap3'
 IMGSCALE = 1.0/10.0;%
+OPTION.USE_PRELOADED_DATA = 0;
+OPTION.OUTLIER_FILTER = 1;	% {1,2}
+OPTION.COLORCH = 2;
+OPTION.CHROMACITY_CANCEL = 1;
+
+
+
 RPCA_METHOD = {'TNN_RPCA', 'EB_RPCA_1Side'}; % 
-
-
 fn_path = @(x) fullfile(IMGPATH, x);
 imgread = @(x) imresize(im2double(imread(x)), IMGSCALE);
-COLORCH = 2;
+COLORCH = OPTION.COLORCH;
 
-APARA = fn_config_para('target_rank', 3);
+APARA = fn_config_para('target_rank', 3, 'beta', 1.5);
 
 
 
@@ -31,29 +39,49 @@ seq_img = 1:size(flist,1);
 imgmat = zeros(imsz(1)*imsz(2), length(seq_img));
 maxv_arr = [];
 disp('Loading images...')
-for i = 1:length(seq_img)
-    % curfname = sprintf(fformat, seq_img(i));
-    curfname = fn_path(flist(i).name);
-    % cell_imgs{i} = imgread(curfname) - img_back;
-    cell_imgs{i} = imgread(curfname);
+if ~exist('datamat.mat') || ~OPTION.USE_PRELOADED_DATA
 
-    labimg = rgb2lab(cell_imgs{i})./100;
-    chroimg = bsxfun(@rdivide, cell_imgs{i}, labimg(:,:,1)+eps);
-    
-    grayimg = cell_imgs{i}(:,:,COLORCH)./chroimg(:,:,COLORCH);
-    maxv_arr(i) = max(grayimg(:));
-    imgmat(:, i) = grayimg(:);
+	for i = 1:length(seq_img)
+	    % curfname = sprintf(fformat, seq_img(i));
+	    curfname = fn_path(flist(i).name);
+	    % cell_imgs{i} = imgread(curfname) - img_back;
+	    cell_imgs{i} = imgread(curfname);
+
+	    labimg = rgb2lab(cell_imgs{i})./100;
+	    chroimg = bsxfun(@rdivide, cell_imgs{i}, labimg(:,:,1)+eps);
+	    
+	    % Chromacity canceling
+	    if OPTION.CHROMACITY_CANCEL
+	    	grayimg = cell_imgs{i}(:,:,COLORCH)./chroimg(:,:,COLORCH);
+	    else
+	    	% grayimg = cell_imgs{i}(:,:,COLORCH);
+	    	grayimg = rgb2gray(cell_imgs{i});
+	    end
+	    maxv_arr(i) = max(grayimg(:));
+	    imgmat(:, i) = grayimg(:);
+	end
+
+	% imgmat = bsxfun(@rdivide, imgmat, maxv_arr);
+	imgmat = imgmat./max(maxv_arr);
+	save('datamat.mat', 'imgmat');
+else
+	load('datamat.mat');
 end
 
-% imgmat = bsxfun(@rdivide, imgmat, maxv_arr);
-imgmat = imgmat./max(maxv_arr);
-imgmat = bsxfun(@minus, imgmat, mean(imgmat, 2));
 
 
 
 %% Robust uncalibrated pseudo photometric stereo
-[L, E] = feval(RPCA_METHOD{1}, imgmat', APARA);
+disp('Outlier filtering');
+[L, E] = feval(RPCA_METHOD{OPTION.OUTLIER_FILTER}, imgmat', APARA);
 imgmat = L';
+imgmat = bsxfun(@minus, imgmat, mean(imgmat, 2));
+
+
+
+
+
+
 
 %% SVD
 SVDmode = 1;
@@ -79,3 +107,15 @@ end
 normal2d = (reshape(pnormal, imsz(1), [], 3)+1)*0.5;
 imshow(normal2d)
 imwrite(normal2d, ['robust_pnormal' num2str(COLORCH) '.jpg']);
+
+
+%% Since the normal is not physically plausible, depth cannot be reconstructed,
+% Need calibration or need to solve GBR ambiguity
+
+% mask = ones(size(normal2d));
+% mask = mask(:,:,1);
+% mask(:,1) = 0; mask(:,end) = 0;
+% mask(1,:) = 0; mask(end,:) = 0;
+
+% z = DepthMap( normal2d, mask);
+% figure(2), surfl(z); shading interp; colormap gray
