@@ -5,13 +5,14 @@ close all; clf; addpath(genpath('Solver'));
 
 
 %% Definition
-IMGPATH = '../Photometry_sample/cap3'
+IMGPATH = '../Photometry_sample/cap5'
 IMGSCALE = 1.0/10.0;%
-OPTION.USE_PRELOADED_DATA = 0;
-OPTION.OUTLIER_FILTER = 1;	% {1,2}
+OPTION.USE_PRELOADED_DATA = 1;
+OPTION.OUTLIER_FILTER = 2;	% {0,1,2}
 OPTION.COLORCH = 2;
-OPTION.CHROMACITY_CANCEL = 1;
-
+OPTION.CHROMACITY_CANCEL = 0;
+OPTION.BETA = 1;
+OPTION
 
 
 RPCA_METHOD = {'TNN_RPCA', 'EB_RPCA_1Side'}; % 
@@ -19,16 +20,18 @@ fn_path = @(x) fullfile(IMGPATH, x);
 imgread = @(x) imresize(im2double(imread(x)), IMGSCALE);
 COLORCH = OPTION.COLORCH;
 
-APARA = fn_config_para('target_rank', 3, 'beta', 1.5);
+APARA = fn_config_para('target_rank', 3, 'beta', OPTION.BETA );
 
 
 
 %% Code
 
 flist = dir(fn_path("*.jpg"));
+flags = contains({flist(:).name}, 'ambiant');
+blackimgname = flist(flags).name;
+flist(flags) = [];
 
-img_back = imgread(fn_path(flist(1).name));
-% img_back = imgread('IMG_0008.JPG');
+img_back = imgread(fn_path(blackimgname));
 imsz = size(img_back);
 % fformat = 'IMG_%04d.JPG';
 
@@ -44,15 +47,15 @@ if ~exist('datamat.mat') || ~OPTION.USE_PRELOADED_DATA
 	for i = 1:length(seq_img)
 	    % curfname = sprintf(fformat, seq_img(i));
 	    curfname = fn_path(flist(i).name);
-	    % cell_imgs{i} = imgread(curfname) - img_back;
-	    cell_imgs{i} = imgread(curfname);
+	    cell_imgs{i} = max(imgread(curfname) - img_back,0);
+% 	    cell_imgs{i} = imgread(curfname);
 
 	    labimg = rgb2lab(cell_imgs{i})./100;
 	    chroimg = bsxfun(@rdivide, cell_imgs{i}, labimg(:,:,1)+eps);
 	    
 	    % Chromacity canceling
 	    if OPTION.CHROMACITY_CANCEL
-	    	grayimg = cell_imgs{i}(:,:,COLORCH)./chroimg(:,:,COLORCH);
+	    	grayimg = cell_imgs{i}(:,:,COLORCH)./(chroimg(:,:,COLORCH)+eps);
 	    else
 	    	% grayimg = cell_imgs{i}(:,:,COLORCH);
 	    	grayimg = rgb2gray(cell_imgs{i});
@@ -70,13 +73,13 @@ end
 
 
 
-
-%% Robust uncalibrated pseudo photometric stereo
-disp('Outlier filtering');
-[L, E] = feval(RPCA_METHOD{OPTION.OUTLIER_FILTER}, imgmat', APARA);
-imgmat = L';
-imgmat = bsxfun(@minus, imgmat, mean(imgmat, 2));
-
+if OPTION.OUTLIER_FILTER
+    %% Robust uncalibrated pseudo photometric stereo
+    disp('Outlier filtering');
+    [L, E] = feval(RPCA_METHOD{OPTION.OUTLIER_FILTER}, imgmat', APARA);
+    imgmat = L';
+    imgmat = bsxfun(@minus, imgmat, mean(imgmat, 2));
+end
 
 
 
@@ -106,7 +109,7 @@ if sum(pnormal(:,3)<0) > sum(pnormal(:,3)>=0)
 end
 normal2d = (reshape(pnormal, imsz(1), [], 3)+1)*0.5;
 imshow(normal2d)
-imwrite(normal2d, ['robust_pnormal' num2str(COLORCH) '.jpg']);
+imwrite(normal2d, ['results/robust' num2str(OPTION.OUTLIER_FILTER) '_ch' num2str(COLORCH) '_chrome' num2str(OPTION.CHROMACITY_CANCEL) '_svd' num2str(SVDmode) '_beta' num2str(OPTION.BETA) '.jpg']);
 
 
 %% Since the normal is not physically plausible, depth cannot be reconstructed,
