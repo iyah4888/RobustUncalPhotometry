@@ -15,4 +15,4 @@
     * #5: robust PCA parameter (sparisty balance)
       * ![robust0_ch2_chrome0_svd1_beta1.jpg](robust0_ch2_chrome0_svd1_beta1.jpg)
       * ![robust1_ch2_chrome0_svd1_beta1.jpg](robust1_ch2_chrome0_svd1_beta1.jpg)
-      * ![robust1_ch2_chrome0_svd1_beta0.5.jpg](robust1_ch2_chrome0_svd1_beta0.jpg)
+      * ![robust1_ch2_chrome0_svd1_beta0.5.jpg](robust1_ch2_chrome0_svd1_beta0.5.jpg)
