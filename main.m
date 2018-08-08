@@ -6,7 +6,7 @@ close all; clf; addpath(genpath('Solver'));
 
 %% Definition
 IMGPATH = '../Photometry_sample/cap5'
-IMGSCALE = 1.0/10.0;%
+IMGSCALE = 1.0/20.0;%
 OPTION.USE_PRELOADED_DATA = 1;
 OPTION.OUTLIER_FILTER = 2;	% {0,1,2}
 OPTION.COLORCH = 2;
