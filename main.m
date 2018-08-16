@@ -126,7 +126,8 @@ pnormal = bsxfun(@rdivide, pnormal, sqrt(sum(pnormal.^2, 2)));
 if sum(pnormal(:,3)<0) > sum(pnormal(:,3)>=0)
 	pnormal = -pnormal;
 end
-normal2d = (reshape(pnormal, imsz(1), [], 3)+1)*0.5;
+pure_normal2d = reshape(pnormal, imsz(1), [], 3);
+normal2d = (pure_normal2d+1)*0.5;
 
 toc;
 
@@ -138,14 +139,23 @@ imshow(normal2d)
 % Need calibration or need to solve GBR ambiguity
 
 
-mask = zeros(size(normal2d));
-mask = mask(:,:,1);
-mask(100:300, 200:450) = 1;
+% mask = zeros(size(normal2d));
+% mask = mask(:,:,1);
+% mask(100:300, 200:450) = 1;
 % mask(:,1) = 0; mask(:,end) = 0;
 % mask(1,:) = 0; mask(end,:) = 0;
 
-z = DepthMap( normal2d, mask);
-dz = z(:,1:end-1) - z(:,2:end);
-dz(abs(dz)>1) = 0;
-imagesc(dz)
-figure(2), surfl(z); shading interp; colormap gray
+% z = DepthMap( normal2d, mask);
+% dz = z(:,1:end-1) - z(:,2:end);
+% dz(abs(dz)>1) = 0;
+% imagesc(dz)
+% figure(2), surfl(z); shading interp; colormap gray
+
+
+%% See a single direction map
+disp('pick a reference point');
+pt = round(vl_click(1));
+refer_vector = pure_normal2d(pt(2), pt(1),:);
+refer_vector = refer_vector./norm(refer_vector(:));
+imagesc(sum(bsxfun(@times, pure_normal2d, reshape(refer_vector, 1,1,3)), 3))
+colorbar;
