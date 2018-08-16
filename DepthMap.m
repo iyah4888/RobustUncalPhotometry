@@ -30,22 +30,24 @@ function [z] = DepthMap(surfNormals, maskImage )
   M = sparse(2*numPixels, numPixels);
   b = zeros(2*numPixels, 1);
 
+  nxnz = surfNormals(:,:,1)./surfNormals(:,:,3);
+  nynz = surfNormals(:,:,2)./surfNormals(:,:,3);
   for d = 1: numPixels
       pRow = objectPixels(d, 1);
       pCol = objectPixels(d, 2);
-      nx = surfNormals(pRow, pCol, 1);
-      ny = surfNormals(pRow, pCol, 2);
-      nz = surfNormals(pRow, pCol, 3);      
+%       nx = surfNormals(pRow, pCol, 1);
+%       ny = surfNormals(pRow, pCol, 2);
+%       nz = surfNormals(pRow, pCol, 3);      
 
       if (index(pRow, pCol+1) > 0) && (index(pRow-1, pCol) > 0)     
           % Both its (X+1, Y) and (X, Y+1) are still inside the object.
           M(2*d-1, index(pRow, pCol))   = 1;
           M(2*d-1, index(pRow, pCol+1)) = -1;   % (X+1, Y)
-          b(2*d-1, 1) = nx / nz;   
+          b(2*d-1, 1) = nxnz(pRow, pCol);   
 
           M(2*d, index(pRow, pCol))     = 1;
           M(2*d, index(pRow-1, pCol))   = -1;     % (X, Y+1)
-          b(2*d, 1) = ny / nz;  
+          b(2*d, 1) = nynz(pRow, pCol);  
 
       elseif (index(pRow-1, pCol) > 0)     
           % Its (X, Y+1) is still inside the object, but (X+1, Y) is outside the object.
@@ -53,11 +55,11 @@ function [z] = DepthMap(surfNormals, maskImage )
           if (index(pRow, pCol+f) > 0)
               M(2*d-1, index(pRow, pCol)) = 1;
               M(2*d-1, index(pRow, pCol+f)) = -1;   % (X+f, Y)
-              b(2*d-1, 1) = f * nx / nz;    
+              b(2*d-1, 1) = -nxnz(pRow, pCol); 
           end
           M(2*d, index(pRow, pCol)) = 1;
           M(2*d, index(pRow-1, pCol)) = -1;     % (X, Y+1)
-          b(2*d, 1) = ny / nz;      
+          b(2*d, 1) = nynz(pRow, pCol);     
 
       elseif (index(pRow, pCol+1) > 0)     
           % Its (X+1, Y) is still inside the object, but (X, Y+1) is outside the object.
@@ -65,24 +67,24 @@ function [z] = DepthMap(surfNormals, maskImage )
           if (index(pRow-f, pCol) > 0)
               M(2*d, index(pRow, pCol)) = 1;
               M(2*d, index(pRow-f, pCol)) = -1;     % (X, Y+f)
-              N(2*d, 1) = f*ny / nz;               
+              N(2*d, 1) = -nynz(pRow, pCol);                 
           end
           M(2*d-1, index(pRow, pCol)) = 1;
           M(2*d-1, index(pRow, pCol+1)) = -1;   % (X+1, Y)
-          N(2*d-1, 1) = nx / nz; 
+          N(2*d-1, 1) = nxnz(pRow, pCol); 
 
       else     % Both its (X+1) and (Y+1) are outside the object.
           f = -1;
           if (index(pRow, pCol+f) > 0)
               M(2*d-1, index(pRow, pCol)) = 1;
               M(2*d-1, index(pRow, pCol+f)) = -1;   % (X+f, Y)
-              N(2*d-1, 1) = f * nx / nz;           
+              N(2*d-1, 1) = -nxnz(pRow, pCol); 
           end
           f = -1;
           if (index(pRow-f, pCol) > 0)
               M(2*d, index(pRow, pCol)) = 1;
               M(2*d, index(pRow-f, pCol)) = -1;     % (X, Y+f)
-              b(2*d, 1) = f*ny / nz;              
+              b(2*d, 1) = -nynz(pRow, pCol);                 
           end
       end
   end
